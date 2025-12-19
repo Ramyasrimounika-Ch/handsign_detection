@@ -1,0 +1,31 @@
+import pandas as pd
+df = pd.read_csv('Dataset/ALL THE BEST.csv')
+df['label'] = 'ALL THE BEST'  
+df.to_csv('Dataset/ALL THE BEST.csv', index=False)
+df2 = pd.read_csv('Dataset/CALL ME.csv')
+df2['label'] = 'CALL ME'  
+df2.to_csv('Dataset/CALL ME.csv', index=False)
+df3 = pd.read_csv('Dataset/HI.csv')
+df3['label'] = 'HI'  
+df3.to_csv('Dataset/HI.csv', index=False)
+df4 = pd.read_csv('Dataset/HOW.csv')
+df4['label'] = 'HOW'  
+df4.to_csv('Dataset/HOW.csv', index=False)
+df5 = pd.read_csv('Dataset/I.csv')
+df5['label'] = 'I'  
+df5.to_csv('Dataset/I.csv', index=False)
+df6 = pd.read_csv('Dataset/LOVE YOU.csv')
+df6['label'] = 'LOVE YOU'  
+df6.to_csv('Dataset/LOVE YOU.csv', index=False)
+df7 = pd.read_csv('Dataset/OK.csv')
+df7['label'] = 'OK'  
+df7.to_csv('Dataset/OK.csv', index=False)
+df8 = pd.read_csv('Dataset/SORRY.csv')
+df8['label'] = 'SORRY'  
+df8.to_csv('Dataset/SORRY.csv', index=False)
+df9 = pd.read_csv('Dataset/YOU.csv')
+df9['label'] = 'YOU'  
+df9.to_csv('Dataset/YOU.csv', index=False)
+csv_files = ['Dataset/ALL THE BEST.csv', 'Dataset/CALL ME.csv', 'Dataset/HI.csv', 'Dataset/HOW.csv','Dataset/I.csv','Dataset/LOVE YOU.csv','Dataset/OK.csv','Dataset/SORRY.csv','Dataset/YOU.csv']
+df_merged = pd.concat([pd.read_csv(f) for f in csv_files], ignore_index=True) 
+df_merged.to_csv('merged.csv', index=False)

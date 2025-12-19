@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hand Sign Prediction with Video</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+    h1 { text-align: center; }
+    video, canvas {
+      display: block;
+      margin: 10px auto;
+      border: 2px solid #333;
+    }
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+    }
+    input[type="number"] {
+      width: 100%;
+      padding: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: block;
+      margin: auto;
+    }
+    .result {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Hand Sign Prediction with Video</h1>
+
+  <video id="video" width="640" height="480" autoplay></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
+
+  <button onclick="predictFromVideo()">Predict from Video</button>
+
+  <div class="input-grid" id="inputGrid"></div>
+  <button onclick="predictFromManual()">Predict from Manual Input</button>
+
+  <div class="result" id="result"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.min.js"></script>
+
+  <script>
+    const videoElement = document.getElementById('video');
+    const canvasElement = document.getElementById('canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    const resultDiv = document.getElementById('result');
+    const inputGrid = document.getElementById('inputGrid');
+
+    for (let i = 0; i < 42; i++) {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "any";
+      input.placeholder = `Feature ${i + 1}`;
+      inputGrid.appendChild(input);
+    }
+
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+    });
+
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.5,
+    });
+
+    hands.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({ image: videoElement });
+      },
+      width: 640,
+      height: 480,
+    });
+    camera.start();
+
+    let latestLandmarks = [];
+
+    function onResults(results) {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+        drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
+        drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 1 });
+
+        // Save x, y coordinates
+        latestLandmarks = landmarks.flatMap(point => [point.x, point.y]);
+      }
+      canvasCtx.restore();
+    }
+
+    async function predictFromVideo() {
+      if (latestLandmarks.length !== 42) {
+        resultDiv.textContent = "No hand detected or incomplete landmarks.";
+        return;
+      }
+
+      const response = await fetch("http://127.0.0.1:8000/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: latestLandmarks }),
+      });
+
+      const result = await response.json();
+      if (result.predicted_label) {
+        resultDiv.textContent = `Predicted Label (Video): ${result.predicted_label}`;
+      } else {
+        resultDiv.textContent = `Error: ${result.error || "Unknown"}`;
+      }
+    }
+
+    async function predictFromManual() {
+      const inputs = document.querySelectorAll('#inputGrid input');
+      const data = Array.from(inputs).map(input => parseFloat(input.value));
+
+      if (data.length !== 42 || data.some(isNaN)) {
+        resultDiv.textContent = "Please enter all 42 values.";
+        return;
+      }
+
+      const response = await fetch("http://127.0.0.1:8000/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: data }),
+      });
+
+      const result = await response.json();
+      if (result.predicted_label) {
+        resultDiv.textContent = `Predicted Label (Manual): ${result.predicted_label}`;
+      } else {
+        resultDiv.textContent = `Error: ${result.error || "Unknown"}`;
+      }
+    }
+  </script>
+</body>
+</html>
